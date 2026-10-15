@@ -1,0 +1,338 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Day at the Track</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: track and tote board in the left column, betting slip and results in the right; one column on phones (track, slip, board, results). */
+:root{
+  --paper:#dfe8ea; --panel:#f7faf9; --ink:#14262b; --muted:#566b70; --line:#bccbce;
+  --turf:#3e7d4f; --red:#c8322b; --board:#10201f; --bulb:#ffc83d; --focus:#1f6feb;
+  --font-display:Impact,Haettenschweiler,"Arial Narrow Bold",sans-serif;
+  --font-body:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:15px/1.4 var(--font-body);padding-block:20px 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{max-width:1100px;margin:0 auto;display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:end;justify-content:space-between}
+h1{font:400 clamp(32px,6vw,48px)/1 var(--font-display);letter-spacing:.02em;text-transform:uppercase;margin:0}
+.sub{margin:6px 0 0;color:var(--muted)}
+h2{font:700 12px/1 var(--font-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:8px 12px;min-height:40px;line-height:1.15}
+button:hover:not(:disabled){border-color:var(--ink)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+button small{display:block;font:11px var(--font-mono);opacity:.8;margin-top:2px}
+.primary{background:var(--red);color:#fff;border-color:var(--red);font-weight:700;letter-spacing:.05em;text-transform:uppercase;min-height:46px}
+.primary:hover:not(:disabled){background:#a82620;border-color:#a82620}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:flex;gap:0}
+.seg button{border-radius:0;margin-left:-1px}
+.seg button:first-child{border-radius:8px 0 0 8px;margin:0}
+.seg button:last-child{border-radius:0 8px 8px 0}
+main{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+.col{display:contents}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.track{padding:0;overflow:hidden}
+canvas{display:block;width:100%;height:auto;aspect-ratio:800/340}
+.under{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px}
+#status{font-weight:600;min-width:0;flex:1 1 220px}
+#go{flex:0 1 200px;min-width:150px}
+#banner{padding:12px 14px;background:var(--bulb);color:#1a1300;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;font-weight:700}
+#tote{background:var(--board);border-radius:10px;padding:6px;display:grid;gap:2px}
+#tote button{display:grid;grid-template-columns:16px 24px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;width:100%;background:transparent;color:#e6f1ed;border:0;border-radius:6px;padding:8px 10px}
+#tote button[aria-checked=true]{background:var(--bulb);color:#1a1300}
+#tote button:hover:not(:disabled){background:#1b3532}
+#tote button[aria-checked=true]:hover:not(:disabled){background:var(--bulb)}
+#tote b{font:700 15px var(--font-mono)}
+#tote em{font:700 17px var(--font-mono);font-style:normal;color:var(--bulb)}
+#tote button[aria-checked=true] em{color:#1a1300}
+#tote span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid rgba(0,0,0,.35)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.row>button{flex:1 1 56px}
+.pl>button{flex:1 1 70px}
+.row input{flex:1 1 90px;min-width:0;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);min-height:40px}
+#msg{min-height:1.4em;margin:8px 0 0;color:var(--muted);font-size:14px}
+#bets{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+#bets li{display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px dashed var(--line);border-radius:8px;padding:6px 10px;font-size:14px}
+#bets li span{min-width:0}
+#bets .x{min-height:30px;padding:2px 9px}
+.won{color:#16703a;font-weight:700;white-space:nowrap}.lost{color:var(--muted);white-space:nowrap}
+#res ol{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+#res li{display:flex;gap:8px;align-items:center}
+#res li b{width:1.2em;font-family:var(--font-mono)}
+#res li em{margin-left:auto;font:normal 13px var(--font-mono);color:var(--muted)}
+.dq{background:var(--red);color:#fff;border-radius:4px;padding:0 5px;font-size:12px;font-weight:700}
+.hint{margin:0;color:var(--muted)}
+footer{color:var(--muted);font-size:13px}
+@media(min-width:920px){
+  main{grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);align-items:start}
+  .col{display:grid;gap:16px;align-content:start}
+}
+@media(max-width:919px){#kTrack{order:1}#kSlip{order:2}#kBoard{order:3}#kRes{order:4}}
+</style>
+
+<div class="app">
+<header>
+  <div>
+    <h1>Day at the Track</h1>
+    <p class="sub">Six furlongs, eight runners, four players with $100 each. First to $500 wins the game.</p>
+  </div>
+  <div class="bar">
+    <div class="seg" id="spd" role="group" aria-label="Race speed">
+      <button data-s=".65">Slow</button><button data-s="1">Average</button><button data-s="1.6">Fast</button>
+    </div>
+    <button id="snd" aria-pressed="true">Sound on</button>
+    <button id="reset">Reset race (3)</button>
+    <button id="newg">New game</button>
+  </div>
+</header>
+
+<main>
+  <div class="col">
+    <section class="panel track" id="kTrack">
+      <canvas id="c" width="800" height="340" aria-label="Race track with eight horses"></canvas>
+      <div id="banner" hidden><span id="bt"></span><button id="bn">Play again</button></div>
+      <div class="under"><div id="status" role="status" aria-live="polite">Place your bets.</div><button id="go" class="primary">They're off!</button></div>
+    </section>
+    <section id="kBoard">
+      <h2>Tote board &middot; pick a horse</h2>
+      <div id="tote" role="radiogroup" aria-label="Choose a horse"></div>
+    </section>
+  </div>
+  <div class="col">
+    <section class="panel" id="kSlip">
+      <h2>Betting slip</h2>
+      <div class="row pl" id="pl" role="group" aria-label="Player"></div>
+      <div class="row" id="chips" role="group" aria-label="Wager"></div>
+      <div class="row" style="margin-top:-6px"><input id="oth" type="number" min="1" max="9999" inputmode="numeric" placeholder="Other amount, up to $9999" aria-label="Other wager"></div>
+      <div class="row" id="kind" role="group" aria-label="Finish"></div>
+      <button id="place" class="primary" style="width:100%">Place bet</button>
+      <p id="msg" role="status"></p>
+      <ul id="bets"></ul>
+    </section>
+    <section class="panel" id="kRes"><div id="res"></div></section>
+  </div>
+</main>
+<footer>An original game in the spirit of early-90s shareware racing games. Win, Place and Show tickets pay the posted odds, a half and a third of them.</footer>
+</div>
+
+<script>
+/*CORE*/
+var NAMES=["Copper Mile","Quiet Thunder","Marmalade Sky","Dusty Harbor","Late Bloomer","Pocket Aces","Tin Roof","Slow Burn","Gravel Road","Moon Pie","Salt Flat","Blue Hour","Juniper Lane","Mister Fiddle","Rattle On","Old Chestnut","Paper Lantern","Biscuit Boy","Clover Hill","Whistling Gus","Velvet Hammer","Last Orders","Brass Ring","Sugar Maple"];
+var LADDER=[2,3,4,5,6,8,10,15],LEN=1000,DIV={W:1,P:2,S:3},POS={W:0,P:1,S:2};
+var SPREAD=0.08,KICK=0.07,NOISE=0.9,DECAY=1.2,INQ=0.14,FORM=0.10;
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a,r){for(var i=a.length-1;i>0;i--){var j=Math.floor(r()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function makeField(r){
+  var nm=shuffle(NAMES.slice(),r),od=shuffle(LADDER.map(function(o){return o>=4&&r()<.4?o+1:o}),r);
+  var ps=od.map(function(o){return 1/(o+1)}),pm=Math.max.apply(0,ps);
+  return od.map(function(o,i){return{n:i+1,name:nm[i],odds:o,str:ps[i]/pm}});
+}
+function Race(field,r){
+  this.r=r;this.t=0;this.fin=[];this.done=false;
+  this.h=field.map(function(f){return{n:f.n,p:0,v:0,d:0,tc:null,ph:r()*6,base:1+SPREAD*f.str+(r()+r()+r()-1.5)*FORM,kick:550+r()*250,ka:(r()-.35)*KICK}});
+}
+Race.prototype.step=function(dt){
+  var r=this.r,self=this,K=LEN/12;
+  dt=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
+  this.h.forEach(function(h){
+    if(h.tc===null){
+      h.d+=-h.d*DECAY*dt+(r()-.5)*NOISE*Math.sqrt(dt)*.1;
+      var v=(h.base+(h.p>h.kick?h.ka:0)+h.d)*K,pv=h.p;
+      h.p+=v*dt;h.v=v;
+      if(h.p>=LEN){
+        var span=h.p-pv;
+        h.tc=self.t+(span>0?dt*(LEN-pv)/span:dt);
+        h.p=LEN;
+        self.fin.push(h);
+      }
+    }else{
+      h.v=Math.max(0,h.v*(1-1.8*dt));
+      h.p=Math.min(h.p+h.v*dt,LEN*1.06);
+    }
+    h.ph+=h.v*dt*.19;
+  });
+  this.t+=dt;
+  this.done=this.fin.length>=this.h.length;
+};
+Race.prototype.order=function(){return this.fin.slice().sort(function(a,b){return a.tc-b.tc}).map(function(h){return h.n})};
+function runRace(field,r){var R=new Race(field,r);while(!R.done)R.step(1/60);return R.order()}
+function inquiry(order,r){
+  if(r()>=INQ)return{held:false,dq:0,order:order};
+  if(r()<.6)return{held:true,dq:order[0],order:order.slice(1).concat(order[0])};
+  return{held:true,dq:0,order:order};
+}
+function r2(x){return Math.round(x*100)/100}
+function payout(b,order){var i=order.indexOf(b.h);return i<0||i>POS[b.k]?0:r2(b.a+b.a*b.o/DIV[b.k])}
+function oddsStr(o,d){return o%d?o+"-"+d:(o/d)+"-1"}
+function usd(x){return"$"+(x%1?x.toFixed(2):x)}
+/*END*/
+
+var S={bal:[100,100,100,100],pl:0,amt:10,kind:"W",horse:0,bets:[],field:null,mode:"bet",resets:3,spd:1,snd:true,race:null,last:null,goal:500,ended:false,hoof:0,call:0};
+var SW=["#d62828","#f4f4f4","#1d4ed8","#f4c20d","#2e9e4f","#232323","#f07f13","#f08ab5"],SWT=["#fff","#111","#fff","#111","#fff","#fff","#111","#111"];
+var COAT=["#6b3f23","#4a2c1a","#8a5a2e","#33302f","#9a6a3a","#5b3b2a","#7a4a2a","#a37543"];
+var KN={W:"Win",P:"Place",S:"Show"};
+function el(i){return document.getElementById(i)}
+function say(t){el("status").textContent=t}
+function nm(n){return S.field[n-1].name}
+
+/* sound */
+var AC=null;
+function au(){if(!S.snd)return null;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();return AC}catch(e){return null}}
+function tone(f,d,type,v,at){var a=au();if(!a)return;var t=a.currentTime+(at||0),o=a.createOscillator(),g=a.createGain();o.type=type||"square";o.frequency.value=f;g.gain.setValueAtTime(v||.05,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02)}
+function noise(d,v,fc,swell){var a=au();if(!a)return;var n=Math.floor(a.sampleRate*d),b=a.createBuffer(1,n,a.sampleRate),x=b.getChannelData(0),i;for(i=0;i<n;i++)x[i]=Math.random()*2-1;
+  var s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain(),t=a.currentTime;s.buffer=b;f.type="bandpass";f.frequency.value=fc;
+  if(swell){g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+d*.35);g.gain.linearRampToValueAtTime(.0001,t+d)}else g.gain.value=v;
+  s.connect(f);f.connect(g);g.connect(a.destination);s.start()}
+function fanfare(){[523,659,784].forEach(function(f,i){tone(f,.2,"square",.05,i*.18)});tone(1047,.55,"square",.06,.54)}
+function chime(ok){if(ok){[784,988,1175].forEach(function(f,i){tone(f,.25,"triangle",.09,i*.12)})}else tone(180,.4,"sawtooth",.05)}
+
+/* track drawing */
+var cv=el("c"),cx=cv.getContext("2d"),W=800,H=340,X0=64,XF=690,Y0=30,LH=(H-Y0-12)/8;
+function px(p){return X0+p*(XF-X0)/LEN}
+function horse(x,y,i,ph){
+  cx.save();cx.translate(x,y);
+  var c=COAT[i];cx.strokeStyle=c;cx.lineWidth=2.6;cx.lineCap="round";
+  [[-8,0],[-5,Math.PI],[-29,.9],[-26,Math.PI+.9]].forEach(function(l){var a=Math.sin(ph+l[1])*.75;cx.beginPath();cx.moveTo(l[0],-4);cx.lineTo(l[0]+Math.sin(a)*11,-4+Math.cos(a)*11);cx.stroke()});
+  cx.strokeStyle="#2a1a10";cx.lineWidth=2.4;cx.beginPath();cx.moveTo(-34,-9);cx.quadraticCurveTo(-42,-7,-40,2+Math.sin(ph)*1.5);cx.stroke();
+  cx.fillStyle=c;cx.beginPath();cx.ellipse(-20,-7,14,6,0,0,6.3);cx.fill();
+  cx.beginPath();cx.moveTo(-10,-10);cx.lineTo(-3,-19);cx.lineTo(2,-15);cx.lineTo(-5,-5);cx.closePath();cx.fill();
+  cx.beginPath();cx.ellipse(0,-14,5,2.8,.55,0,6.3);cx.fill();
+  cx.fillStyle=SW[i];cx.fillRect(-25,-12,9,7);
+  cx.fillStyle=SWT[i];cx.font="700 7px ui-monospace,Menlo,monospace";cx.textAlign="center";cx.fillText(i+1,-20.5,-6.3);
+  cx.fillStyle=SW[i];cx.beginPath();cx.ellipse(-17,-17,4,5.2,-.4,0,6.3);cx.fill();
+  cx.fillStyle="#e9c9a6";cx.beginPath();cx.arc(-13.5,-22.5,2.7,0,6.3);cx.fill();
+  cx.fillStyle=SW[i];cx.beginPath();cx.arc(-13.5,-23,2.8,3.14,6.3);cx.fill();
+  cx.restore();
+}
+function draw(){
+  var k=cv.width/W,i,j,y;
+  cx.setTransform(k,0,0,k,0,0);cx.textBaseline="alphabetic";
+  cx.fillStyle="#3e7d4f";cx.fillRect(0,0,W,H);
+  cx.fillStyle="#e8f3e6";cx.font="600 11px ui-sans-serif,system-ui,sans-serif";cx.textAlign="left";cx.fillText("FURLONGS TO GO",10,19);
+  cx.textAlign="center";for(i=1;i<=5;i++)cx.fillText(6-i,px(i*LEN/6),19);
+  for(i=0;i<8;i++){y=Y0+i*LH;cx.fillStyle=i%2?"#bd8e5e":"#c99c6b";cx.fillRect(0,y,W,LH)}
+  cx.strokeStyle="rgba(255,255,255,.38)";cx.lineWidth=1;cx.setLineDash([4,4]);
+  for(i=1;i<=5;i++){cx.beginPath();cx.moveTo(px(i*LEN/6),Y0);cx.lineTo(px(i*LEN/6),H-12);cx.stroke()}
+  cx.setLineDash([]);cx.fillStyle="#fff";cx.fillRect(X0,Y0,2,H-Y0-12);
+  for(j=0;j<Math.ceil(LH*8/6);j++){cx.fillStyle=j%2?"#111":"#fff";cx.fillRect(XF,Y0+j*6,6,6);cx.fillStyle=j%2?"#fff":"#111";cx.fillRect(XF+6,Y0+j*6,6,6)}
+  cx.fillStyle="#fff";cx.fillRect(0,Y0-3,W,3);cx.fillRect(0,H-12,W,3);
+  if(!S.field)return;
+  for(i=0;i<8;i++){
+    y=Y0+i*LH+LH/2;
+    cx.fillStyle=SW[i];cx.beginPath();cx.arc(30,y,11,0,6.3);cx.fill();cx.strokeStyle="rgba(0,0,0,.4)";cx.stroke();
+    cx.fillStyle=SWT[i];cx.font="700 12px ui-monospace,Menlo,monospace";cx.textAlign="center";cx.fillText(i+1,30,y+4);
+    var h=S.race?S.race.h[i]:null;
+    horse(px(h?h.p:0)-2,y+9,i,h?h.ph:0);
+  }
+}
+function fit(){var d=window.devicePixelRatio||1,w=cv.clientWidth||W;cv.width=Math.round(w*d);cv.height=Math.round(w*d*H/W);draw()}
+
+/* panels */
+function renderBoard(){
+  el("tote").innerHTML=S.field.map(function(f){return'<button role="radio" aria-checked="'+(S.horse===f.n)+'" data-n="'+f.n+'"'+(S.mode!=="bet"?" disabled":"")+'><i class="sw" style="background:'+SW[f.n-1]+'"></i><b>'+f.n+'</b><span>'+f.name+'</span><em>'+f.odds+'-1</em></button>'}).join("");
+}
+function renderSlip(){
+  var f=S.horse?S.field[S.horse-1]:null,off=S.mode!=="bet"?" disabled":"";
+  el("pl").innerHTML=S.bal.map(function(b,i){return'<button aria-pressed="'+(S.pl===i)+'" data-i="'+i+'">Player '+(i+1)+'<small>'+usd(b)+'</small></button>'}).join("");
+  el("chips").innerHTML=[5,10,25,50,100].map(function(a){return'<button aria-pressed="'+(S.amt===a)+'" data-a="'+a+'"'+off+'>$'+a+'</button>'}).join("");
+  el("kind").innerHTML=[["W","Win"],["P","Place"],["S","Show"]].map(function(k){return'<button aria-pressed="'+(S.kind===k[0])+'" data-k="'+k[0]+'"'+off+'>'+k[1]+(f?'<small>pays '+oddsStr(f.odds,DIV[k[0]])+'</small>':'')+'</button>'}).join("");
+  el("place").disabled=S.mode!=="bet";
+  el("bets").innerHTML=S.bets.map(function(b,i){
+    var t="P"+(b.p+1)+" &middot; "+usd(b.a)+" "+KN[b.k]+" &middot; #"+b.h+" "+nm(b.h);
+    var end=S.mode==="bet"?'<button class="x" data-x="'+i+'" aria-label="Cancel this bet">&times;</button>':(b.g>0?'<b class="won">+'+usd(r2(b.g-b.a))+'</b>':'<span class="lost">lost</span>');
+    return'<li><span>'+t+'</span>'+end+'</li>';
+  }).join("");
+}
+function renderRes(){
+  var L=S.last;
+  if(!L){el("res").innerHTML='<h2>Official result</h2><p class="hint">The order of finish appears here after each race.</p>';return}
+  el("res").innerHTML='<h2>Official result</h2><ol>'+L.order.map(function(n,i){var f=L.field[n-1];
+    return'<li><b>'+(i+1)+'</b><i class="sw" style="background:'+SW[n-1]+'"></i><span>#'+n+' '+f.name+(n===L.dq?' <span class="dq">DQ</span>':'')+'</span><em>'+f.odds+'-1</em></li>'}).join("")+'</ol>';
+}
+function sync(){
+  el("go").disabled=S.mode==="run"||S.mode==="inq"||S.ended;
+  el("go").textContent=S.mode==="result"?"Next race":S.mode==="bet"?"They're off!":"Racing…";
+  el("reset").textContent="Reset race ("+S.resets+")";
+  el("reset").disabled=!(S.mode==="bet"&&!S.bets.length&&S.resets>0);
+  Array.prototype.forEach.call(el("spd").children,function(b){b.setAttribute("aria-pressed",String(+b.dataset.s===S.spd));b.disabled=S.mode==="run"||S.mode==="inq"});
+  el("snd").textContent=S.snd?"Sound on":"Sound off";el("snd").setAttribute("aria-pressed",String(S.snd));
+  renderBoard();renderSlip();
+}
+
+/* flow */
+function newField(){S.field=makeField(Math.random)}
+function nextRace(){S.bets=[];S.horse=0;S.resets=3;S.mode="bet";S.race=null;newField();el("msg").textContent="";sync();say("Place your bets.");draw()}
+function newGame(){S.bal=[100,100,100,100];S.ended=false;S.last=null;el("banner").hidden=true;renderRes();nextRace()}
+function startRace(){
+  if(S.mode!=="bet")return;
+  S.mode="run";S.race=new Race(S.field,Math.random);S.hoof=0;S.call=0;sync();fanfare();say("They're off!");
+  var last=null;
+  function loop(ts){
+    if(S.mode!=="run"||!S.race)return;
+    if(!Number.isFinite(ts))ts=performance.now();
+    if(last===null)last=ts;
+    var dt=Math.max(0,Math.min(.05,(ts-last)/1000));
+    last=ts;
+    var m=dt*S.spd,n=Math.max(1,Math.round(m*60)),i;
+    for(i=0;i<n;i++)S.race.step(m/n);
+    S.hoof+=m;if(S.hoof>.16){S.hoof=0;noise(.05,.07,260)}
+    var lead=S.race.h.reduce(function(a,b){return b.p>a.p?b:a});
+    if(S.call<1&&lead.p>=500){S.call=1;say("Halfway: #"+lead.n+" "+nm(lead.n)+" leads.")}
+    else if(S.call<2&&lead.p>=830){S.call=2;say("Into the stretch: #"+lead.n+" "+nm(lead.n)+" on top.")}
+    draw();
+    if(S.race.done)finishRace();else requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+function finishRace(){
+  S.mode="inq";sync();noise(1.4,.12,900,true);
+  var res=inquiry(S.race.order(),Math.random);
+  if(res.held){
+    say("Stewards' inquiry…");
+    setTimeout(function(){say(res.dq?"#"+res.dq+" "+nm(res.dq)+" is disqualified for interference.":"Objection overruled. The result stands.");setTimeout(function(){official(res)},1700)},1800);
+  }else{say("Photo finish…");setTimeout(function(){official(res)},900)}
+}
+function official(res){
+  var any=false,tot=0;
+  S.last={order:res.order,dq:res.dq,field:S.field};
+  S.bets.forEach(function(b){b.g=payout(b,res.order);S.bal[b.p]=r2(S.bal[b.p]+b.g);if(b.g>0)any=true;tot+=b.g});
+  S.mode="result";
+  var w=res.order[0];say("Official: #"+w+" "+nm(w)+" wins at "+S.field[w-1].odds+"-1."+(S.bets.length?(any?" Winning tickets are paid.":" No winning tickets."):""));
+  if(S.bets.length)chime(any);
+  var mx=Math.max.apply(0,S.bal);
+  if(mx>=S.goal){S.ended=true;el("bt").textContent="Player "+(S.bal.indexOf(mx)+1)+" wins the game with "+usd(mx)+"!";el("banner").hidden=false}
+  else if(S.bal.every(function(b){return b<1})){S.ended=true;el("bt").textContent="All four accounts are empty.";el("banner").hidden=false}
+  sync();renderRes();draw();
+}
+
+/* events */
+el("tote").onclick=function(e){var b=e.target.closest("button");if(b&&!b.disabled){S.horse=+b.dataset.n;renderBoard();renderSlip()}};
+el("pl").onclick=function(e){var b=e.target.closest("button");if(b){S.pl=+b.dataset.i;renderSlip()}};
+el("chips").onclick=function(e){var b=e.target.closest("button");if(b&&!b.disabled){S.amt=+b.dataset.a;el("oth").value="";renderSlip()}};
+el("kind").onclick=function(e){var b=e.target.closest("button");if(b&&!b.disabled){S.kind=b.dataset.k;renderSlip()}};
+el("oth").oninput=function(){var v=Math.floor(+this.value);if(v>=1){S.amt=Math.min(9999,v);renderSlip()}};
+el("bets").onclick=function(e){var b=e.target.closest("button");if(!b||S.mode!=="bet")return;var x=S.bets.splice(+b.dataset.x,1)[0];S.bal[x.p]=r2(S.bal[x.p]+x.a);el("msg").textContent="Bet cancelled and refunded.";sync()};
+el("place").onclick=function(){
+  var m=el("msg"),bal=S.bal[S.pl];
+  if(S.mode!=="bet")return;
+  if(bal<1){m.textContent="Player "+(S.pl+1)+" has no money left.";return}
+  if(!S.horse){m.textContent="Pick a horse on the tote board first.";return}
+  var a=Math.min(S.amt,Math.floor(bal)),f=S.field[S.horse-1];
+  S.bets.push({p:S.pl,a:a,h:S.horse,k:S.kind,o:f.odds});S.bal[S.pl]=r2(bal-a);
+  m.textContent="Player "+(S.pl+1)+" bets "+usd(a)+" to "+KN[S.kind]+" on #"+f.n+" "+f.name+"."+(a<S.amt?" Wager lowered to the account balance.":"");
+  sync();
+};
+el("go").onclick=function(){if(S.mode==="bet"){if(S.bets.length||true)startRace()}else if(S.mode==="result")nextRace()};
+el("reset").onclick=function(){if(S.mode==="bet"&&!S.bets.length&&S.resets>0){S.resets--;S.horse=0;newField();sync();draw();say("New field posted.")}};
+el("spd").onclick=function(e){var b=e.target.closest("button");if(b&&!b.disabled){S.spd=+b.dataset.s;sync()}};
+el("snd").onclick=function(){S.snd=!S.snd;sync();if(S.snd)tone(660,.12,"square",.05)};
+el("newg").onclick=newGame;el("bn").onclick=newGame;
+window.addEventListener("resize",fit);
+newField();sync();renderRes();fit();
+</script>
+
+</body></html>
